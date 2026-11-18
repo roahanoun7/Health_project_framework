@@ -1,0 +1,17 @@
+{
+  "roa": {
+    "silent": 1,
+    "WhiteNoise": 0,
+    "FastInstrumental": 0,
+    "FastLyrical": 1,
+    "SlowInstrumental": 0,
+    "SlowLyrical": 0,
+    "song_history": {
+      "WhiteNoise": [],
+      "FastInstrumental": [],
+      "FastLyrical": [],
+      "SlowInstrumental": [],
+      "SlowLyrical": []
+    }
+  }
+}
