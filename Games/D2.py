@@ -11,6 +11,11 @@ from tkinter import ttk
 
 
 CONDITIONS = ("no_break", "walking_break", "doomscrolling_break")
+CONDITION_LABELS = {
+    "no_break": "No break",
+    "walking_break": "Walking break",
+    "doomscrolling_break": "Doomscrolling break",
+}
 TIMEPOINTS = ("pre_break", "after_break", "end_of_experiment")
 CSV_FIELDS = (
     "record_type",
@@ -137,18 +142,40 @@ class AttentionPracticeApp(tk.Tk):
             text=(
                 "Select each d with exactly two dashes. The dashes may be above, "
                 "below, or split between both sides.\n\n"
-                
             ),
             justify="center",
             wraplength=760,
             style="Instructions.TLabel",
         ).pack(pady=12)
+
+        ttk.Label(
+            self.page,
+            text="Choose condition:",
+            style="Instructions.TLabel",
+        ).pack(pady=(12, 8))
+        condition_frame = ttk.Frame(self.page)
+        condition_frame.pack(pady=(0, 8))
+        self.condition_var = tk.StringVar(value=self.condition)
+        for condition in CONDITIONS:
+            ttk.Radiobutton(
+                condition_frame,
+                text=CONDITION_LABELS[condition],
+                variable=self.condition_var,
+                value=condition,
+            ).pack(anchor="w", pady=3)
+
         ttk.Button(
             self.page,
             text="Start practice",
-            command=self.start_round,
+            command=self.start_selected_condition,
             style="Action.TButton",
         ).pack(pady=24)
+
+    def start_selected_condition(self):
+        self.condition = self.condition_var.get()
+        if self.condition not in CONDITIONS:
+            return
+        self.start_round()
 
     def start_round(self):
         self.round_number += 1

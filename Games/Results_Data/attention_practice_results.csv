@@ -1,0 +1,13 @@
+record_type,run_id,participant_id,session,condition,timepoint,timestamp,round_number,n_correct,n_wrong,n_missed,percent_correct,rt_ms,mean_rt_ms,n_enter_presses,timed_out
+round,NR1XdmbHBMAYq_qL,PENDING,1,no_break,pre_break,2026-11-18T20:44:58+01:00,1,9,0,1,90.0,20880,20880,1,False
+round,NR1XdmbHBMAYq_qL,PENDING,1,no_break,pre_break,2026-11-18T20:45:14+01:00,2,12,0,0,100.0,16318,16318,1,False
+round,NR1XdmbHBMAYq_qL,PENDING,1,no_break,pre_break,2026-11-18T20:45:45+01:00,3,7,1,0,100.0,30000,30000,0,True
+run_summary,NR1XdmbHBMAYq_qL,PENDING,1,no_break,pre_break,2026-11-18T20:45:45+01:00,total,28,1,1,96.55,,18599.0,2,
+round,27DlH2BUA-YBxPuh,PENDING,1,no_break,pre_break,2026-11-18T20:54:36+01:00,1,2,2,5,28.57,2749,2749,1,False
+round,27DlH2BUA-YBxPuh,PENDING,1,no_break,pre_break,2026-11-18T20:54:40+01:00,2,1,3,4,20.0,3476,3476,1,False
+round,27DlH2BUA-YBxPuh,PENDING,1,no_break,pre_break,2026-11-18T20:54:44+01:00,3,2,2,6,25.0,3299,3299,1,False
+run_summary,27DlH2BUA-YBxPuh,PENDING,1,no_break,pre_break,2026-11-18T20:54:44+01:00,total,5,7,15,25.0,,3174.67,3,
+round,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:05+01:00,1,4,2,4,50.0,4725,4725,1,False
+round,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:10+01:00,2,0,6,6,0.0,4890,4890,1,False
+round,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:19+01:00,3,4,4,2,66.67,8529,8529,1,False
+run_summary,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:19+01:00,total,8,12,12,40.0,,6048.0,3,
