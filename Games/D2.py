@@ -49,9 +49,11 @@ def make_symbol(is_target):
     return letter, above_count, dash_count - above_count
 
 
-class AttentionPracticeApp(tk.Tk):
+class AttentionPracticeApp(tk.Frame):
     def __init__(
         self,
+        parent,
+        controller=None,
         rounds=3,
         items_per_round=24,
         seconds_per_round=30,
@@ -61,14 +63,15 @@ class AttentionPracticeApp(tk.Tk):
         timepoint="pre_break",
         results_path=None,
     ):
-        if session not in (1, 2, 3):
-            raise ValueError("session must be 1, 2, or 3")
+        if session not in range(1, 25):
+            raise ValueError("session must be between 1 and 24")
         if condition not in CONDITIONS:
             raise ValueError(f"condition must be one of: {', '.join(CONDITIONS)}")
         if timepoint not in TIMEPOINTS:
             raise ValueError(f"timepoint must be one of: {', '.join(TIMEPOINTS)}")
 
-        super().__init__()
+        super().__init__(parent)
+        self.controller = controller
         self.rounds = rounds
         self.items_per_round = items_per_round
         self.seconds_per_round = seconds_per_round
@@ -88,13 +91,6 @@ class AttentionPracticeApp(tk.Tk):
         self.round_active = False
         self.round_enter_presses = 0
 
-        self.title("Attention Practice")
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        window_width = min(1000, max(640, screen_width - 40))
-        window_height = min(760, max(520, screen_height - 80))
-        self.geometry(f"{window_width}x{window_height}")
-        self.minsize(min(760, window_width), min(600, window_height))
         self.bind("<Return>", self.handle_enter)
 
         style = ttk.Style(self)
@@ -122,6 +118,25 @@ class AttentionPracticeApp(tk.Tk):
         self.total_false_alarms = 0
         self.round_results = []
         self.save_error = None
+        self.run_summary = None
+        self.game_started_at = None
+
+    def start_game(self, condition=None, timepoint=None):
+        """Reset the D2 run and show its condition-selection screen."""
+        if self.controller is not None:
+            self.participant_id = self.controller.participant_id
+            self.session = self.controller.session_number
+        if condition is not None:
+            if condition not in CONDITIONS:
+                raise ValueError(f"condition must be one of: {', '.join(CONDITIONS)}")
+            self.condition = condition
+        if timepoint is not None:
+            if timepoint not in TIMEPOINTS:
+                raise ValueError(f"timepoint must be one of: {', '.join(TIMEPOINTS)}")
+            self.timepoint = timepoint
+        self.start_new_run()
+        self.round_active = False
+        self.show_start_page()
 
     def clear_page(self):
         if self.timer_id is not None:
@@ -148,36 +163,49 @@ class AttentionPracticeApp(tk.Tk):
             style="Instructions.TLabel",
         ).pack(pady=12)
 
-        ttk.Label(
-            self.page,
-            text="Choose condition:",
-            style="Instructions.TLabel",
-        ).pack(pady=(12, 8))
-        condition_frame = ttk.Frame(self.page)
-        condition_frame.pack(pady=(0, 8))
-        self.condition_var = tk.StringVar(value=self.condition)
-        for condition in CONDITIONS:
-            ttk.Radiobutton(
-                condition_frame,
-                text=CONDITION_LABELS[condition],
-                variable=self.condition_var,
-                value=condition,
-            ).pack(anchor="w", pady=3)
+        if self.controller is None:
+            ttk.Label(
+                self.page,
+                text="Choose condition:",
+                style="Instructions.TLabel",
+            ).pack(pady=(12, 8))
+            condition_frame = ttk.Frame(self.page)
+            condition_frame.pack(pady=(0, 8))
+            self.condition_var = tk.StringVar(value=self.condition)
+            for condition in CONDITIONS:
+                ttk.Radiobutton(
+                    condition_frame,
+                    text=CONDITION_LABELS[condition],
+                    variable=self.condition_var,
+                    value=condition,
+                ).pack(anchor="w", pady=3)
+        else:
+            ttk.Label(
+                self.page,
+                text=(
+                    f"Scheduled condition: {CONDITION_LABELS[self.condition]}    "
+                    f"Timepoint: {self.timepoint}"
+                ),
+                style="Instructions.TLabel",
+            ).pack(pady=(12, 8))
 
         ttk.Button(
             self.page,
-            text="Start practice",
+            text="Start test" if self.controller is not None else "Start practice",
             command=self.start_selected_condition,
             style="Action.TButton",
         ).pack(pady=24)
 
     def start_selected_condition(self):
-        self.condition = self.condition_var.get()
+        if self.controller is None:
+            self.condition = self.condition_var.get()
         if self.condition not in CONDITIONS:
             return
         self.start_round()
 
     def start_round(self):
+        if self.round_number == 0:
+            self.game_started_at = datetime.now().astimezone()
         self.round_number += 1
         targets = {
             i
@@ -406,6 +434,7 @@ class AttentionPracticeApp(tk.Tk):
             ),
             "timed_out": "",
         }
+        self.run_summary = summary
 
         try:
             self.results_path.parent.mkdir(parents=True, exist_ok=True)
@@ -431,19 +460,50 @@ class AttentionPracticeApp(tk.Tk):
         ).pack(pady=(90, 20))
         ttk.Label(
             self.page,
-            text="Thank you. Your session is finished.",
+            text="The attention test is complete. Continue to the next stage.",
             style="Instructions.TLabel",
         ).pack(pady=12)
         ttk.Button(
             self.page,
-            text="Close",
-            command=self.destroy,
+            text="Continue",
+            command=self.finish_game,
             style="Action.TButton",
         ).pack(pady=24)
         self.show_results_window()
 
+    def finish_game(self):
+        if self.controller is None:
+            self.winfo_toplevel().destroy()
+            return
+
+        finished_at = datetime.now().astimezone()
+        run_results = {
+            "run_id": self.run_id,
+            "session": self.session,
+            "condition": self.condition,
+            "timepoint": self.timepoint,
+            "total_correct": self.total_hits,
+            "total_wrong": self.total_false_alarms,
+            "total_missed": self.total_misses,
+            "percent_correct": self.run_summary["percent_correct"],
+            "mean_rt_ms": self.run_summary["mean_rt_ms"],
+            "enter_presses": self.run_summary["n_enter_presses"],
+        }
+        result_prefix = f"d2_{self.timepoint}"
+        self.controller.d2_results.update(
+            {f"{result_prefix}_{key}": value for key, value in run_results.items()}
+        )
+        self.controller.add_game_timestamp((
+            self.game_started_at.isoformat(timespec="milliseconds"),
+            finished_at.isoformat(timespec="milliseconds"),
+        ))
+        if self.results_window.winfo_exists():
+            self.results_window.destroy()
+        self.controller.game_finished()
+
     def show_results_window(self):
         results_window = tk.Toplevel(self)
+        self.results_window = results_window
         results_window.title("Researcher Results")
         results_window.geometry("1000x600")
         results_window.minsize(760, 420)
@@ -579,7 +639,16 @@ def run_test(
     timepoint="pre_break",
     results_path=None,
 ):
+    root = tk.Tk()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    window_width = min(1000, max(640, screen_width - 40))
+    window_height = min(760, max(520, screen_height - 80))
+    root.title("Attention Practice")
+    root.geometry(f"{window_width}x{window_height}")
+    root.minsize(min(760, window_width), min(600, window_height))
     app = AttentionPracticeApp(
+        root,
         rounds=rounds,
         items_per_round=items_per_round,
         seconds_per_round=seconds_per_round,
@@ -589,7 +658,8 @@ def run_test(
         timepoint=timepoint,
         results_path=results_path,
     )
-    app.mainloop()
+    app.pack(fill="both", expand=True)
+    root.mainloop()
 
 
 if __name__ == "__main__":

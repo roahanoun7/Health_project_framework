@@ -7,6 +7,10 @@ import yaml
 import numpy as np
 import pandas as pd
 import os
+from pathlib import Path
+
+
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
 
 
 # ---------- Configuration ----------
@@ -31,8 +35,8 @@ class ResultsPage(tk.Frame):
         tk.Button(btn_frame, text='Save results', command=self.save_results,
                   bg=BUTTON_BG, fg=BUTTON_FG, activebackground=BUTTON_ACTIVE_BG).pack(side='left', padx=6)
 
-        # self.dataframe_folder_path = os.path.join(os.getcwd(), 'experiment_data')
-        config = yaml.safe_load(open(r"../config.yaml"))
+        with CONFIG_PATH.open(encoding="utf-8") as config_file:
+            config = yaml.safe_load(config_file)
         self.dataframe_folder_path = config["data_folder_path"]
         if not os.path.exists(self.dataframe_folder_path):
             print("Missing experiment_data folder, creating folder")
@@ -43,32 +47,53 @@ class ResultsPage(tk.Frame):
         self.display_results()
 
     def display_results(self):
-        s = f"Games done, thank you for participating: {self.controller.participant_name.get().strip()}! \nPress save results to save and exit the game"
+        s = (
+            f"Session complete. Thank you, "
+            f"{self.controller.participant_name.get().strip()}!\n"
+            f"Week {self.controller.week_number}, session "
+            f"{self.controller.session_number}: "
+            f"{self.controller.scheduled_activity}.\n"
+            "Press Save results to save and exit."
+        )
         self.results_label.config(text=s)
 
     def save_results(self):
         """saves results of all the games, uses pandas to save all the scores, appends data to already existing dataframe if it already exists in given folder path"""
         participant_name = self.controller.participant_name.get().strip()
-        questionairre_answers = self.controller.questionnaire_answers
+        questionnaire_answers = self.controller.questionnaire_answers
+        post_test_answers = self.controller.post_test_answers
 
         digit_forw_score = self.controller.digit_forward_score
         digit_backw_score = self.controller.digit_backward_score
         all_sequence_answers = self.controller.all_sequence_answers
 
-        maze_score = self.controller.maze_score
-        maze_wrong_steps = self.controller.maze_wrong_steps
-        all_maze_steps = self.controller.all_maze_key_presses
+        d2_results = self.controller.d2_results
 
         QA_score = self.controller.QA_done
         reading_QA_results = self.controller.reading_QA_results
 
         date_time = self.controller.date_time
         random_seed = self.controller.random_seed
-        music_state = self.controller.music_state
         game_timestamps = self.controller.game_timestamps
 
         # ======== main df ========
-        main_data = {'participant_name': participant_name, 'date_time': pd.to_datetime(date_time), 'seed': random_seed, "music_state": music_state, 'rest': questionairre_answers['rest'], 'consumed': questionairre_answers['consumed'], 'exercise': questionairre_answers['exercise'], 'healthy': questionairre_answers['healthy'], 'comments': questionairre_answers['comments'], 'confirmed': questionairre_answers['confirmed'], "digit_forward_score": digit_forw_score, "digit_backward_score": digit_backw_score, "maze_score": maze_score, "maze_wrong_steps": maze_wrong_steps, "QA_done": QA_score, "QA_score": np.nan}
+        main_data = {
+            'participant_name': participant_name,
+            'participant_id': self.controller.participant_id,
+            'participant_language': self.controller.participant_language,
+            'week': self.controller.week_number,
+            'session': self.controller.session_number,
+            'scheduled_activity': self.controller.scheduled_activity,
+            'date_time': pd.to_datetime(date_time),
+            'seed': random_seed,
+            **questionnaire_answers,
+            **post_test_answers,
+            'digit_forward_score': digit_forw_score,
+            'digit_backward_score': digit_backw_score,
+            **d2_results,
+            'QA_done': QA_score,
+            'QA_score': np.nan
+        }
         main_df = pd.DataFrame([main_data])
         main_df.set_index(['participant_name', 'date_time'], inplace=True)
    
@@ -80,7 +105,8 @@ class ResultsPage(tk.Frame):
                 all_games.append(digit_data)
 
         games_times_df = pd.DataFrame(all_games)
-        games_times_df.set_index(['participant_name', 'date_time'], inplace=True)
+        if not games_times_df.empty:
+            games_times_df.set_index(['participant_name', 'date_time'], inplace=True)
 
         # ======== digit span df ========
         digit_counter = 0
@@ -92,19 +118,8 @@ class ResultsPage(tk.Frame):
             digit_counter += 1
 
         digit_span_df = pd.DataFrame(all_sequences)
-        digit_span_df.set_index(['participant_name', 'date_time'], inplace=True)
-
-        # ======== maze_routes df ========
-        maze_counter = 0
-        all_moves = []
-        for maze in all_maze_steps:
-            for move in maze:
-                maze_move_data = {'participant_name': participant_name, 'date_time': pd.to_datetime(date_time), "maze_id": maze_counter, "key_time": pd.to_datetime(move[1]), "key": move[0]}
-                all_moves.append(maze_move_data)
-            maze_counter += 1
-
-        maze_df = pd.DataFrame(all_moves)
-        maze_df.set_index(['participant_name', 'date_time'], inplace=True)
+        if not digit_span_df.empty:
+            digit_span_df.set_index(['participant_name', 'date_time'], inplace=True)
 
         # ======== reading df ========
         all_reading = []
@@ -113,27 +128,24 @@ class ResultsPage(tk.Frame):
             all_reading.append(reading_data)
 
         read_df = pd.DataFrame(all_reading)
-        read_df.set_index(['participant_name', 'date_time'], inplace=True)
+        if not read_df.empty:
+            read_df.set_index(['participant_name', 'date_time'], inplace=True)
 
         # ======== add start-end timestamps to main df ========
-        game_types = ['digit span forward', 'digit span backward', 'maze', 'reading']
         for index in games_times_df.index.unique():
-            all_gametimes = games_times_df.loc[index]
-            for game_type in game_types:
-                start = all_gametimes.loc[all_gametimes["game_type"] == game_type].iloc[0]["start_time"]
-                end = all_gametimes.loc[all_gametimes["game_type"] == game_type].iloc[-1]["end_time"]
-
-                if game_type == "maze" or game_type == "reading":
-                    # get first datapoint, then add 5 min for second point since games only take 5 min
-                    end = start + pd.to_timedelta(5, unit='m')
-
+            participant_times = games_times_df.loc[index]
+            for game_type in participant_times["game_type"].unique():
+                stage_times = participant_times.loc[
+                    participant_times["game_type"] == game_type
+                ]
+                start = stage_times.iloc[0]["start_time"]
+                end = stage_times.iloc[-1]["end_time"]
                 main_df.loc[index, game_type + " start"] = pd.to_datetime(start)
                 main_df.loc[index, game_type + " end"] = pd.to_datetime(end)
 
         self.save_df(main_df, 'main_df')
         self.save_df(games_times_df, "games_times_df")
         self.save_df(digit_span_df, "digit_span_df")
-        self.save_df(maze_df, "maze_df")
         self.save_df(read_df, "read_df")
 
         self.quit_app()

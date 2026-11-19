@@ -11,3 +11,13 @@ round,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:05+01:
 round,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:10+01:00,2,0,6,6,0.0,4890,4890,1,False
 round,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:19+01:00,3,4,4,2,66.67,8529,8529,1,False
 run_summary,g_WvMGJPT8dvYyj2,PENDING,1,walking_break,pre_break,2026-11-18T20:56:19+01:00,total,8,12,12,40.0,,6048.0,3,
+round,3T9yvKepaWHQ5H9W,Participant 1,1,doomscrolling_break,pre_break,2026-11-19T19:11:38+01:00,1,11,1,0,100.0,19663,19663,1,False
+run_summary,3T9yvKepaWHQ5H9W,Participant 1,1,doomscrolling_break,pre_break,2026-11-19T19:11:38+01:00,total,11,1,0,100.0,,19663.0,1,
+round,_bb2zvLcatrvDhuy,Participant 1,1,doomscrolling_break,pre_break,2026-11-19T19:14:13+01:00,1,5,3,5,50.0,6942,6942,1,False
+run_summary,_bb2zvLcatrvDhuy,Participant 1,1,doomscrolling_break,pre_break,2026-11-19T19:14:13+01:00,total,5,3,5,50.0,,6942.0,1,
+round,BSiQ2PxTrq-Juz4A,Participant 1,1,doomscrolling_break,after_break,2026-11-19T19:14:58+01:00,1,12,0,0,100.0,30000,30000,0,True
+run_summary,BSiQ2PxTrq-Juz4A,Participant 1,1,doomscrolling_break,after_break,2026-11-19T19:14:58+01:00,total,12,0,0,100.0,,,0,
+round,nQbto-fmwlWmLOZO,Participant 6,2,walking_break,pre_break,2026-11-19T20:55:28+01:00,1,0,0,6,0.0,1727,1727,1,False
+run_summary,nQbto-fmwlWmLOZO,Participant 6,2,walking_break,pre_break,2026-11-19T20:55:28+01:00,total,0,0,6,0.0,,1727.0,1,
+round,0xq0XyKU6UB3lnpk,Participant 6,2,walking_break,after_break,2026-11-19T20:55:42+01:00,1,0,0,5,0.0,1572,1572,1,False
+run_summary,0xq0XyKU6UB3lnpk,Participant 6,2,walking_break,after_break,2026-11-19T20:55:42+01:00,total,0,0,5,0.0,,1572.0,1,

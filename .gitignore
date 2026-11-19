@@ -208,6 +208,9 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Local participant identities and language preferences
+Framwork/participants.local.yaml
+
 # Ruff stuff:
 .ruff_cache/
 

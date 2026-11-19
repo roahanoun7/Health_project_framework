@@ -16,15 +16,29 @@ Example structure of the `config.yaml` file:
 ```
 squad_df: 'path/to/pickle'
 data_folder_path: 'path/to/folder/for/saving/experiment/data'
+break_schedule_path: 'data/break_schedule.xlsx'
+participants_path: 'participants.local.yaml'
 ```
 
 ### install + prep squad dataset
 install the squad v2 training dataset from this site: `https://rajpurkar.github.io/SQuAD-explorer/`, scroll down to `Training Set V2.0` and download this.
 after this format the json data to a pickled pandas dataframe. this can be done using the script `/misc/save_squad_to_pkl.py`.
 
-### music types
-The music that we used for this experiment is not shared on github since this is too large, if you think you might need this data you can get this on request.
-The used states of music can be found in `game_pages/music_addon.py` file. use this 
+The session schedule is stored at `data/break_schedule.xlsx`. Keep participant
+names and language preferences in the local, git-ignored `participants.local.yaml`:
+
+```
+participants:
+  example_user:
+    name: Example User
+    participant: 1
+    language: Arabic
+```
+
+The app asks for the roster name and a session number from 1 to 24, then looks
+up that participant's scheduled condition. The study session, PASAT, and
+comprehension pages are currently placeholders pending the reading dataset and
+PASAT implementation; do not use this flow for participant data collection yet.
 
 ## Start game
 After setting everything up, you then can run the game by calling: `Game.py` and try to play the game yourself.

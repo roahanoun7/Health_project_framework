@@ -3,14 +3,21 @@
 # See LICENSE.txt
 
 import os
+from pathlib import Path
+
 import pandas as pd
 import yaml
+
+
+CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
+
 
 class DF_parser:
     def __get_df(self, df_name):
         """loads in given dataframe from config with given dataframe name"""
         # load in dataframe/pickle path
-        config = yaml.safe_load(open(r"../config.yaml"))
+        with CONFIG_PATH.open(encoding="utf-8") as config_file:
+            config = yaml.safe_load(config_file)
         df_path = config[df_name]
         print(f"{df_name} df path: ", df_path)
 
@@ -26,8 +33,6 @@ class DF_parser:
         required_levels = {"date_time", "participant_num"}
         if not required_levels.issubset(df.index.names):
             TypeError(f"Dataframe {df_name} is missing the anonymized data")
-        if df_name == "main" and "music_state_num" not in df.columns:
-            TypeError(f"Dataframe {df_name} is missing the anonymized data for music states")
 
         print(f"completed getting anonymized dataframe: {df_name}\n\n\n")
         return df
@@ -59,7 +64,8 @@ class DF_parser:
     def squad_qa(self):
         """returns squad df using the config path for variable squad_df"""
         print(os.getcwd())
-        config = yaml.safe_load(open(r"../config.yaml"))
+        with CONFIG_PATH.open(encoding="utf-8") as config_file:
+            config = yaml.safe_load(config_file)
         df_path = config["squad_df"]
         print(f"squad_df path: ", df_path)
 
