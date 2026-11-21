@@ -14,15 +14,10 @@ You need to create your own 'config.yaml' file inside the root directory folder
 Example structure of the `config.yaml` file:
 
 ```
-squad_df: 'path/to/pickle'
 data_folder_path: 'path/to/folder/for/saving/experiment/data'
 break_schedule_path: 'data/break_schedule.xlsx'
 participants_path: 'participants.local.yaml'
 ```
-
-### install + prep squad dataset
-install the squad v2 training dataset from this site: `https://rajpurkar.github.io/SQuAD-explorer/`, scroll down to `Training Set V2.0` and download this.
-after this format the json data to a pickled pandas dataframe. this can be done using the script `/misc/save_squad_to_pkl.py`.
 
 The session schedule is stored at `data/break_schedule.xlsx`. Keep participant
 names and language preferences in the local, git-ignored `participants.local.yaml`:
@@ -39,12 +34,16 @@ The app asks for the roster name and a session number from 1 to 24, then looks
 up that participant's scheduled condition. The study session, PASAT, and
 comprehension pages are currently placeholders pending the reading dataset and
 PASAT implementation; do not use this flow for participant data collection yet.
+The optional reading page accepts a pandas DataFrame from its caller; no
+pickled dataset setup is required.
 
 ## Start game
 After setting everything up, you then can run the game by calling: `Game.py` and try to play the game yourself.
 
 ## misc files
 
-use `QA_score_grader.py` to grade the QA answers given after a test.
+Session tables are appended as CSV files under `data_folder_path`.
+Use `QA_score_grader.py` to grade answers from `read_df.csv`; scores are saved
+to `main_df.csv`.
 
 combine muse or polar data using the `get_csv_files.py`. currently only support for combining the muse athena data is implemented.  

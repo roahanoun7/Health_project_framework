@@ -7,13 +7,6 @@ import tkinter as tk
 import random
 import time
 from datetime import datetime
-from game_pages.load_df import DF_parser
-
-
-# ------------------------------
-# Directories and files
-# ------------------------------
-READING_DATASET = DF_parser().squad_qa()
 
 # ---------- Configuration ----------
 GAME_TIME_LIMIT = 300  # seconds (short for testing)
@@ -34,9 +27,10 @@ BUTTON_ACTIVE_BG = '#666666'
 
 # ---------- Reading test ----------
 class ReadingPage(tk.Frame):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, dataset=None):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
+        self.dataset = dataset
 
         tk.Label(self, text='Reading Test', font=HEADER_FONT,
                  bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
@@ -91,7 +85,6 @@ class ReadingPage(tk.Frame):
         self.active = False
         self.start_time = time.time() # needs to be time.time()
         self.curr_game_time = datetime.now()
-        self.dataset = READING_DATASET
         self.previous_texts = []
 
         self.context_id = None
@@ -108,6 +101,10 @@ class ReadingPage(tk.Frame):
         self.time_at_question = datetime.now()
 
     def start_game(self):
+        if self.dataset is None:
+            raise RuntimeError(
+                "A reading dataset must be provided before starting the reading test."
+            )
         self.active = True
         self.controller.reading_QA_results = []
         self.controller.QA_done = 0

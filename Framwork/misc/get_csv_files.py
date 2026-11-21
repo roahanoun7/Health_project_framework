@@ -122,12 +122,12 @@ def polar_formatter(dataframe):
     # add code to format the polar data before saving everything
     return dataframe
 
-def merge_csv_files_to_pickle(csv_files, output_filename="merged_output.pkl", device_name="muse"):
+def merge_csv_files_to_csv(csv_files, output_filename="merged_output.csv", device_name="muse"):
     """
     Loads all CSV files safely,
     reports skipped rows per file,
     concatenates them,
-    and saves as a pickle file.
+    and saves the combined data as a CSV file.
     """
 
     if not csv_files:
@@ -186,14 +186,15 @@ def merge_csv_files_to_pickle(csv_files, output_filename="merged_output.pkl", de
     combined_df = pd.concat(dataframes, ignore_index=True, sort=False)
 
     script_directory = os.path.dirname(os.path.abspath(__file__))
-    output_path = os.path.join(script_directory, output_filename)
+    output_name = os.path.splitext(output_filename)[0] + ".csv"
+    output_path = os.path.join(script_directory, output_name)
 
     if device_name == "muse":
         combined_df = muse_formatter(combined_df)
     elif device_name == "polar":
         combined_df = polar_formatter(combined_df)
 
-    combined_df.to_pickle(f"{output_path}.pkl")
+    combined_df.to_csv(output_path, index=False)
 
     print("\n===== Final Summary =====")
     print(f"Total expected rows : {total_expected_rows}")
@@ -225,4 +226,4 @@ if __name__ == "__main__":
             print(f"  - {file}")
 
         # merge_csv_files(csv_files)
-        merge_csv_files_to_pickle(csv_files, output_filename=device_name, device_name=device_name)
+        merge_csv_files_to_csv(csv_files, output_filename=device_name, device_name=device_name)

@@ -5,6 +5,7 @@
 import sys
 from pathlib import Path
 
+# Add the project root (two directories above this file) to Python's import path.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game_pages.main_app import App

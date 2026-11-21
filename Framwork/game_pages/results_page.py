@@ -63,10 +63,8 @@ class ResultsPage(tk.Frame):
         questionnaire_answers = self.controller.questionnaire_answers
         post_test_answers = self.controller.post_test_answers
 
-        digit_forw_score = self.controller.digit_forward_score
-        digit_backw_score = self.controller.digit_backward_score
-        all_sequence_answers = self.controller.all_sequence_answers
-
+       # digit_forw_score = self.controller.digit_forward_score
+        #digit_backw_score = self.controller.digit_backward_score
         d2_results = self.controller.d2_results
 
         QA_score = self.controller.QA_done
@@ -88,8 +86,6 @@ class ResultsPage(tk.Frame):
             'seed': random_seed,
             **questionnaire_answers,
             **post_test_answers,
-            'digit_forward_score': digit_forw_score,
-            'digit_backward_score': digit_backw_score,
             **d2_results,
             'QA_done': QA_score,
             'QA_score': np.nan
@@ -107,19 +103,6 @@ class ResultsPage(tk.Frame):
         games_times_df = pd.DataFrame(all_games)
         if not games_times_df.empty:
             games_times_df.set_index(['participant_name', 'date_time'], inplace=True)
-
-        # ======== digit span df ========
-        digit_counter = 0
-        all_sequences = []
-        for sequence_type in all_sequence_answers:
-            for answer in all_sequence_answers[sequence_type]:
-                digit_data = {'participant_name': participant_name, 'date_time': pd.to_datetime(date_time), "digit_id": digit_counter, "sequence_type": sequence_type, "answer_time": answer[0], "correct_sequence": answer[1], "answered_sequence": answer[2], "correct": answer[3]}
-                all_sequences.append(digit_data)
-            digit_counter += 1
-
-        digit_span_df = pd.DataFrame(all_sequences)
-        if not digit_span_df.empty:
-            digit_span_df.set_index(['participant_name', 'date_time'], inplace=True)
 
         # ======== reading df ========
         all_reading = []
@@ -145,7 +128,7 @@ class ResultsPage(tk.Frame):
 
         self.save_df(main_df, 'main_df')
         self.save_df(games_times_df, "games_times_df")
-        self.save_df(digit_span_df, "digit_span_df")
+        #self.save_df(digit_span_df, "digit_span_df")
         self.save_df(read_df, "read_df")
 
         self.quit_app()
@@ -154,13 +137,14 @@ class ResultsPage(tk.Frame):
         """helper function to save and append new dataframe to already existing dataframe"""
         if len(df) == 0:
             return
-        df_path = os.path.join(self.dataframe_folder_path, f'{name}.pkl')
+        df_path = os.path.join(self.dataframe_folder_path, f'{name}.csv')
         if os.path.exists(df_path):
-            print(f"already an existing with the name: {name}.pkl, combining dataframes")
-            existing_df = pd.read_pickle(df_path)
+            print(f"already an existing with the name: {name}.csv, combining dataframes")
+            existing_df = pd.read_csv(df_path, parse_dates=["date_time"])
+            existing_df.set_index(['participant_name', 'date_time'], inplace=True)
             df = pd.concat([df, existing_df])
         df.sort_index(inplace=True)
-        df.to_pickle(df_path)
+        df.to_csv(df_path)
 
     def quit_app(self):
         self.master.quit()
