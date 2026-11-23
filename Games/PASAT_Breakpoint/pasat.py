@@ -87,7 +87,7 @@ def play_audio(digit):
 
 def append_csv(path, rows):
     """Add rows to a CSV file. The header is written only when the file is new."""
-    DATA_DIR.mkdir(exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     is_new = not path.exists()
     with open(path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -113,19 +113,19 @@ def button(parent, text, command, primary=True):
 
 
 # ---------------------------- the app ----------------------------
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Breakpoint | PASAT")
-        self.geometry("920x680")
-        self.minsize(760, 600)
+class PasatPage(tk.Frame):
+    def __init__(self, parent, controller=None, results_dir=None):
+        super().__init__(parent, bg=BG)
+        self.controller = controller
+        self.results_dir = Path(results_dir) if results_dir is not None else DATA_DIR
         self.configure(bg=BG)
         self.job = None            # pending timer, so we can cancel it
         self.info = {}             # participant ID, session, condition, timepoint
         self.main = tk.Frame(self, bg=BG)
         self.main.pack(fill="both", expand=True, padx=40, pady=30)
-        self.bind("<Escape>", lambda e: self.show_setup())  # Esc = stop, nothing saved
-        self.show_setup()
+        if self.controller is None:
+            self.bind("<Escape>", lambda e: self.show_setup())  # Esc = stop, nothing saved
+            self.show_setup()
 
     def clear(self):
         if self.job:
@@ -160,9 +160,17 @@ class App(tk.Tk):
                                                     ("Condition", self.v_con, CONDITIONS),
                                                     ("Timepoint", self.v_tp, TIMEPOINTS)]):
             label(card, name, 11, MUTED).grid(row=2, column=col, sticky="w", padx=(0, 12))
-            menu = tk.OptionMenu(card, var, *options)
+            if name == "Condition":
+                menu = tk.OptionMenu(
+                    card, var, *options, command=self.update_timepoint_options
+                )
+            else:
+                menu = tk.OptionMenu(card, var, *options)
             menu.config(font=(FONT, 12), bg=CARD2, fg=TEXT, relief="flat", highlightthickness=0, width=12)
             menu.grid(row=3, column=col, sticky="ew", padx=(0, 12), pady=(2, 16))
+            if name == "Timepoint":
+                self.timepoint_menu = menu
+        self.update_timepoint_options()
 
         tk.Checkbutton(card, text="Do a short practice round first", variable=self.v_prac, bg=CARD, fg=TEXT,
                        selectcolor=BG, activebackground=CARD, activeforeground=TEXT,
@@ -170,6 +178,24 @@ class App(tk.Tk):
         button(card, "Continue", self.check_setup).grid(row=5, column=0, columnspan=3)
         text, color = voice_status()
         label(self.main, text, 12, color).pack(pady=14)
+
+    def update_timepoint_options(self, *_):
+        """Only offer timepoints that are valid for the selected condition."""
+        if self.v_con.get() == "no_break":
+            options = ("final",)
+        else:
+            options = ("pre_break", "post_break")
+
+        menu = self.timepoint_menu["menu"]
+        menu.delete(0, "end")
+        for option in options:
+            menu.add_radiobutton(
+                label=option,
+                variable=self.v_tp,
+                value=option,
+            )
+        if self.v_tp.get() not in options:
+            self.v_tp.set(options[0])
 
     def check_setup(self):
         pid = self.v_pid.get().strip()
@@ -179,6 +205,17 @@ class App(tk.Tk):
         self.info = {"participant_id": pid, "session": self.v_ses.get(),
                      "condition": self.v_con.get(), "timepoint": self.v_tp.get()}
         self.practice_first = self.v_prac.get()
+        self.show_instructions()
+
+    def start_session(self, participant_id, session, condition, timepoint):
+        """Start the framework's PASAT stage with metadata supplied by its session."""
+        self.info = {
+            "participant_id": participant_id,
+            "session": str(session),
+            "condition": condition,
+            "timepoint": timepoint,
+        }
+        self.practice_first = True
         self.show_instructions()
 
     # ---- screen 2: instructions ----
@@ -305,15 +342,18 @@ class App(tk.Tk):
         if not self.practice:
             run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
             common = {"run_id": run_id, **self.info}
-            append_csv(DATA_DIR / "pasat_trials.csv",
+            append_csv(self.results_dir / "pasat_trials.csv",
                        [{**common, **x, "interval_s": INTERVAL_SECONDS} for x in t])
-            append_csv(DATA_DIR / "pasat_summary.csv",
+            append_csv(self.results_dir / "pasat_summary.csv",
                        [{**common, "timestamp": datetime.now().isoformat(timespec="seconds"),
                          "interval_s": INTERVAL_SECONDS,
                          "mode": ("audio+screen" if SHOW_DIGIT_ON_SCREEN else "audio") if audio_ready() else "screen",
                          "n_trials": len(t), "n_correct": n_ok, "n_wrong": n_wrong,
                          "n_missed": n_missed, "percent_correct": percent, "mean_rt_ms": mean_rt}])
-            saved = f"Saved to {DATA_DIR.name}/pasat_summary.csv and pasat_trials.csv"
+            saved = (
+                f"Saved to {self.results_dir / 'pasat_summary.csv'} "
+                "and pasat_trials.csv"
+            )
 
         self.clear()
         label(self.main, "Practice done" if self.practice else "Finished", 32, ACCENT, True).pack(pady=(10, 4))
@@ -331,12 +371,22 @@ class App(tk.Tk):
         row = tk.Frame(self.main, bg=BG)
         row.pack(pady=8)
         if self.practice:
-            button(row, "Practice again", lambda: self.start_run(True), primary=False).pack(side="left", padx=8)
+            if self.controller is None:
+                button(row, "Practice again", lambda: self.start_run(True), primary=False).pack(side="left", padx=8)
             button(row, "Start the real test", lambda: self.start_run(False)).pack(side="left", padx=8)
+        elif self.controller is not None:
+            button(row, "Continue", self.controller.game_finished).pack(side="left", padx=8)
         else:
             button(row, "New participant / run", self.show_setup, primary=False).pack(side="left", padx=8)
-            button(row, "Quit", self.destroy).pack(side="left", padx=8)
+            button(row, "Quit", self.winfo_toplevel().destroy).pack(side="left", padx=8)
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    root = tk.Tk()
+    root.title("Breakpoint | PASAT")
+    root.geometry("920x680")
+    root.minsize(760, 600)
+    page = PasatPage(root)
+    page.pack(fill="both", expand=True)
+    root.bind("<Escape>", lambda event: page.show_setup())
+    root.mainloop()

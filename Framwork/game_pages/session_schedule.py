@@ -25,6 +25,7 @@ class SessionAssignment:
 
 
 def _resolve_path(config_path: Path, value: str) -> Path:
+    """Resolve a configured path, treating relative paths as config-relative."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("Configured data paths must be non-empty strings.")
     path = Path(value)
@@ -37,6 +38,13 @@ def load_session_assignment(
     participant_name: str,
     session_number: int,
 ) -> SessionAssignment:
+    """Load and validate a participant's schedule assignment for one session.
+
+    This reads the participant roster from the YAML file, finds the requested
+    participant and their participant number, and then reads the matching
+    session row from the Excel schedule. The returned object contains the
+    participant profile and normalized activity for the session.
+    """
     with participants_path.open(encoding="utf-8") as participants_file:
         participants_config = yaml.safe_load(participants_file)
 
@@ -175,6 +183,13 @@ def load_session_assignment_from_config(
     session_number: int,
     config_path: Path = CONFIG_PATH,
 ) -> SessionAssignment:
+    """Resolve the configured data files and load a session assignment.
+
+    This reads the configuration YAML to obtain the schedule and participant
+    file locations, resolves relative locations against the configuration
+    file, and delegates the loading and validation to
+    ``load_session_assignment``.
+    """
     with config_path.open(encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
     if not isinstance(config, dict):

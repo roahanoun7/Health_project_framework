@@ -1,0 +1,7 @@
+run_id,participant_id,session,condition,timepoint,timestamp,interval_s,mode,n_trials,n_correct,n_wrong,n_missed,percent_correct,mean_rt_ms
+20261123-191612,Participant 1,1,doomscrolling,pre_break,2026-11-23T19:16:12,3.0,audio+screen,20,17,1,2,85.0,1846
+20261123-191800,Participant 1,1,doomscrolling,post_break,2026-11-23T19:18:00,3.0,audio+screen,20,9,2,9,45.0,2017
+20261123-192913,Participant 1,1,doomscrolling,pre_break,2026-11-23T19:29:13,3.0,audio+screen,20,15,1,4,75.0,1455
+20261123-193057,Participant 1,1,doomscrolling,post_break,2026-11-23T19:30:57,3.0,audio+screen,20,15,1,4,75.0,1760
+20261123-193351,Participant 2,1,walking,pre_break,2026-11-23T19:33:51,3.0,audio+screen,20,9,7,4,45.0,1910
+20261123-193536,Participant 2,1,walking,post_break,2026-11-23T19:35:36,3.0,audio+screen,20,0,0,20,0.0,

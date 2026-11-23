@@ -2,269 +2,305 @@
 # This project is licensed under GNU GENERAL PUBLIC LICENSE
 # See LICENSE.txt
 
-import textwrap
-import tkinter as tk
-import random
-import time
 from datetime import datetime
+import tkinter as tk
 
-# ---------- Configuration ----------
-GAME_TIME_LIMIT = 300  # seconds (short for testing)
+from game_pages.reading_material import (
+    QUESTIONS_PER_SECTION,
+    ReadingMaterial,
+    ReadingQuestion,
+    questions_for_sections,
+)
 
-FONT = ("Helvetica", 12)
-HEADER_FONT = ("Helvetica", 16, "bold")
-CANVAS_W = 900
-CANVAS_H = 600
-CELL_PIX_DEFAULT = 20
-BG_COLOR = '#2e2e2e'   # dark grey background (app)
-FG_COLOR = '#ffffff'   # foreground (text)
-INPUT_BG = '#e5e5e5'   # light input box (Option A)
 
-# skip game button parameters
-BUTTON_BG = '#444444'
-BUTTON_FG = '#ffffff'
-BUTTON_ACTIVE_BG = '#666666'
+FONT = ("Helvetica", 14)
+HEADER_FONT = ("Helvetica", 24, "bold")
+BG_COLOR = "#0f172a"
+FG_COLOR = "#e2e8f0"
+SURFACE_COLOR = "#1e293b"
+BUTTON_BG = "#38bdf8"
+BUTTON_FG = "#06202e"
+BUTTON_ACTIVE_BG = "#7dd3fc"
 
-# ---------- Reading test ----------
+
 class ReadingPage(tk.Frame):
-    def __init__(self, parent, controller, dataset=None):
+    """Present comprehension questions for sections read during study."""
+
+    def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
-        self.dataset = dataset
-
-        tk.Label(self, text='Reading Test', font=HEADER_FONT,
-                 bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
-
-        # Canvas for centered text
-        self.canvas = tk.Canvas(
-            self, width=CANVAS_W, height=CANVAS_H-275,
-            bg=BG_COLOR, highlightthickness=0
-        )
-        self.canvas.pack(pady=8)
-
-        # Hidden answer frame
-        self.ans_frame = tk.Frame(self, bg=BG_COLOR)
-
-        tk.Label(self.ans_frame, text="Your answer:", font=FONT,
-                 bg=BG_COLOR, fg=FG_COLOR)
-
-        self.question_field = tk.Label(self.ans_frame, text='', font=FONT,
-                                       bg=BG_COLOR, fg=FG_COLOR)
-        self.question_field.pack(pady=6)
-
+        self.material = None
+        self.questions = ()
+        self.sections_read = 0
+        self.question_index = 0
+        self.option_buttons = []
         self.answer_var = tk.StringVar()
-        self.answer_entry = tk.Entry(
-            self.ans_frame, textvariable=self.answer_var,
-            width=50, font=FONT, bg=INPUT_BG
+        self.question_shown_at = None
+        self.started_at = None
+        self.test_finished = False
+
+        title = tk.Label(
+            self,
+            text="Comprehension test",
+            font=HEADER_FONT,
+            bg=BG_COLOR,
+            fg=FG_COLOR,
         )
-        self.answer_entry.pack(pady=6)
-
-        # Buttons
-        btn_frame = tk.Frame(self, bg=BG_COLOR)
-        btn_frame.pack(pady=5)
-
-        # Visible at start
-        self.show_question_btn = tk.Button(
-            btn_frame, text="Show Question",
-            bg=BUTTON_BG, fg=BUTTON_FG, activebackground=BUTTON_ACTIVE_BG,
-            command=self.reveal_question
+        title._theme_role = "title"
+        title.pack(pady=(20, 2))
+        self.topic_label = tk.Label(
+            self,
+            text="",
+            font=FONT,
+            bg=BG_COLOR,
+            fg=FG_COLOR,
         )
-        self.show_question_btn.pack(side="left", padx=6)
+        self.topic_label.pack(pady=(0, 10))
 
-        # button for skipping tests, only for dev mode
-        tk.Button(btn_frame, text='Skip (end test)', command=self.end_test,
-                  bg=BUTTON_BG, fg=BUTTON_FG, activebackground=BUTTON_ACTIVE_BG).pack(side='left', padx=6)
+        self.stage_container = tk.Frame(self, bg=BG_COLOR)
+        self.stage_container.pack(fill="both", expand=True, padx=36, pady=(0, 28))
 
+        self.question_view = tk.Frame(self.stage_container, bg=BG_COLOR)
+        self.completion_view = tk.Frame(self.stage_container, bg=BG_COLOR)
+        for view in (self.question_view, self.completion_view):
+            view.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        self.status_label = tk.Label(
-            self, text="", bg=BG_COLOR, fg=FG_COLOR, font=FONT
+        self._build_question_view()
+        self._build_completion_view()
+
+    def _build_question_view(self):
+        self.question_progress = tk.Label(
+            self.question_view,
+            text="",
+            font=FONT,
+            bg=BG_COLOR,
+            fg=FG_COLOR,
         )
-        self.status_label.pack(pady=4)
+        self.question_progress.pack(pady=(0, 8))
 
-        # State
-        self.active = False
-        self.start_time = time.time() # needs to be time.time()
-        self.curr_game_time = datetime.now()
-        self.previous_texts = []
+        card = tk.Frame(
+            self.question_view,
+            bg=SURFACE_COLOR,
+            padx=28,
+            pady=24,
+        )
+        card._theme_role = "card"
+        card.pack(fill="both", expand=True)
 
-        self.context_id = None
-        self.context = None
-        self.question = None
-        self.answer = None
+        self.question_label = tk.Label(
+            card,
+            text="",
+            font=HEADER_FONT,
+            bg=SURFACE_COLOR,
+            fg=FG_COLOR,
+            wraplength=860,
+            justify="left",
+            anchor="w",
+        )
+        self.question_label._theme_role = "title"
+        self.question_label.pack(fill="x", pady=(0, 18))
 
-        # "context" or "question"
-        self.mode = "context"
+        self.option_frame = tk.Frame(card, bg=SURFACE_COLOR)
+        self.option_frame.pack(fill="x")
+        self.question_status = tk.Label(
+            card,
+            text="",
+            font=FONT,
+            bg=SURFACE_COLOR,
+            fg=FG_COLOR,
+        )
+        self.question_status.pack(pady=(12, 0))
 
-        self.bind_all("<Return>", self.on_key)
+        self.submit_answer_button = tk.Button(
+            self.question_view,
+            text="Submit answer",
+            command=self.submit_answer,
+            state="disabled",
+            bg=BUTTON_BG,
+            fg=BUTTON_FG,
+            activebackground=BUTTON_ACTIVE_BG,
+        )
+        self.submit_answer_button.pack(pady=(14, 0))
 
-        # time for when player presses the 'show question' button
-        self.time_at_question = datetime.now()
+    def _build_completion_view(self):
+        card = tk.Frame(
+            self.completion_view,
+            bg=SURFACE_COLOR,
+            padx=32,
+            pady=28,
+        )
+        card._theme_role = "card"
+        card.pack(expand=True, pady=40)
 
-    def start_game(self):
-        if self.dataset is None:
-            raise RuntimeError(
-                "A reading dataset must be provided before starting the reading test."
+        title = tk.Label(
+            card,
+            text="Comprehension complete",
+            font=HEADER_FONT,
+            bg=SURFACE_COLOR,
+            fg=FG_COLOR,
+        )
+        title._theme_role = "title"
+        title.pack(pady=(0, 12))
+        self.completion_message = tk.Label(
+            card,
+            text="",
+            font=FONT,
+            bg=SURFACE_COLOR,
+            fg=FG_COLOR,
+            justify="center",
+        )
+        self.completion_message.pack()
+
+        self.continue_button = tk.Button(
+            self.completion_view,
+            text="Continue",
+            command=self.controller.game_finished,
+            bg=BUTTON_BG,
+            fg=BUTTON_FG,
+            activebackground=BUTTON_ACTIVE_BG,
+        )
+        self.continue_button.pack(pady=12)
+
+    def start_game(self, material: ReadingMaterial, sections_read: int):
+        """Start comprehension questions for the sections read during study."""
+        if not material.sections:
+            raise ValueError("The reading material contains no sections.")
+        if len(material.questions) != (
+            len(material.sections) * QUESTIONS_PER_SECTION
+        ):
+            raise ValueError(
+                "The reading material must contain exactly two questions per section."
             )
-        self.active = True
+        if not 1 <= sections_read <= len(material.sections):
+            raise ValueError(
+                "The number of sections read must be between 1 and the total "
+                "number of sections."
+            )
+
+        self.material = material
+        self.sections_read = sections_read
+        self.question_index = 0
+        self.questions = questions_for_sections(material, sections_read)
+        self.started_at = datetime.now().astimezone()
+        self.test_finished = False
         self.controller.reading_QA_results = []
         self.controller.QA_done = 0
+        self.topic_label.config(text=material.title)
+        self._create_option_buttons()
+        self._show_question()
 
-        self.new_QA()
-        self.start_time = time.time() #needs to be time.time()
-        self.after(1000, self.check_time)
+    def _create_option_buttons(self):
+        if self.material is None:
+            raise RuntimeError("Reading material has not been loaded.")
+        for button in self.option_buttons:
+            button.destroy()
+        self.option_buttons = []
 
-        # start in context mode
-        self.show_question_btn.config(state="normal")
-        try:
-            self.submit_btn.pack_forget()
-        except:
-            pass
-        try:
-            self.ans_frame.pack_forget()
-        except:
-            pass
+        max_options = max(len(question.options) for question in self.questions)
+        is_right_to_left = self.material.language_code in ("ar", "fa")
+        for option_index in range(max_options):
+            button = tk.Radiobutton(
+                self.option_frame,
+                text="",
+                variable=self.answer_var,
+                value=str(option_index + 1),
+                command=self._answer_selected,
+                font=FONT,
+                bg=SURFACE_COLOR,
+                fg=FG_COLOR,
+                selectcolor="#334155",
+                activebackground=SURFACE_COLOR,
+                activeforeground=FG_COLOR,
+                anchor="e" if is_right_to_left else "w",
+                justify="right" if is_right_to_left else "left",
+                wraplength=820,
+            )
+            button.pack(fill="x", anchor="e" if is_right_to_left else "w", pady=5)
+            self.option_buttons.append(button)
 
-    def new_QA(self):
-        """gathers new QA combination, checks if text has not already been chosen, otherwise skips and gathers new random sample"""
-        self.mode = "context"
+    def _show_question(self):
+        if self.material is None:
+            raise RuntimeError("Reading material has not been loaded.")
+        question = self.questions[self.question_index]
+        is_right_to_left = self.material.language_code in ("ar", "fa")
 
-        while True:
-            sample = self.dataset.iloc[[random.randrange(0,len(self.dataset))]]
-            cid = sample.iat[0, 0]
-            if cid not in self.previous_texts:
-                break
-
-        self.context_id = sample.iat[0, 0]
-        self.context = sample.iat[0, 1]
-        self.question = sample.iat[0, 2]
-        self.answer = sample.iat[0, 3]
-
-        self.previous_texts.append(self.context_id)
-
+        self.question_progress.config(
+            text=f"Question {self.question_index + 1} of {len(self.questions)}"
+        )
+        self.question_label.config(
+            text=question.question,
+            justify="right" if is_right_to_left else "left",
+            anchor="e" if is_right_to_left else "w",
+        )
         self.answer_var.set("")
-        self.draw_context()
-        self.curr_game_time = datetime.now()
+        for option_index, button in enumerate(self.option_buttons):
+            if option_index < len(question.options):
+                button.config(
+                    text=question.options[option_index],
+                    value=str(option_index + 1),
+                )
+                button.pack(fill="x", pady=5)
+            else:
+                button.pack_forget()
+        self.question_status.config(text="")
+        self.submit_answer_button.config(state="disabled")
+        self.question_shown_at = datetime.now().astimezone()
+        self.question_view.tkraise()
 
-    def draw_context(self):
-        """displays all the text and input fields"""
-        self.canvas.delete("all")
-
-        wrapped = textwrap.fill(self.context, width=90)
-
-        # Create text off-screen to measure it
-        temp_id = self.canvas.create_text(
-            5, 5,
-            text=wrapped,
-            font=FONT,
-            width=CANVAS_W - 20,
-            anchor="nw",
-            justify="center"
-        )
-
-        # Calculate height needed
-        bbox = self.canvas.bbox(temp_id)
-        text_height = bbox[3] - bbox[1]
-
-        # Desired padding around text
-        padding = 40
-        needed_height = text_height + padding
-
-        # Set canvas height dynamically
-        self.canvas.config(height=max(needed_height, CANVAS_H - 275))
-
-        # Remove temp text
-        self.canvas.delete(temp_id)
-
-        # Redraw centered text properly
-        self.canvas.create_text(
-            CANVAS_W // 2,
-            20,
-            text=wrapped,
-            font=FONT,
-            width=CANVAS_W - 20,
-            anchor="n",
-            justify="center",
-            fill=FG_COLOR
-        )
-
-        self.status_label.config(text="Read the text, then press 'Show Question'.")
-
-    def reveal_question(self):
-        """reveals the question after the show question button has been pressed, enables input to input field"""
-        if self.mode != "context":
-            return
-
-        self.mode = "question"
-
-        self.question_field.config(text=self.question, width=120)
-
-        # Hidden by default
-        self.submit_btn = tk.Button(
-            self.ans_frame, text="Submit Answer",
-            bg=BUTTON_BG, fg=BUTTON_FG, activebackground=BUTTON_ACTIVE_BG,
-            command=self.submit_answer
-        )
-
-        self.ans_frame.pack(pady=6)
-        self.submit_btn.pack(side="bottom", pady=6)
-
-        self.answer_entry.config(state="normal")
-        self.answer_entry.focus()
-
-        self.show_question_btn.config(state="disabled")
-        self.time_at_question = datetime.now()
-
-        self.status_label.config(text="Please enter an answer:")
+    def _answer_selected(self):
+        self.question_status.config(text="")
+        self.submit_answer_button.config(state="normal")
 
     def submit_answer(self):
-        """checks if response is not empty, then saves answer and calls new_QA to gather new QA"""
-        if not self.active or self.mode != "question":
+        if self.material is None or self.question_shown_at is None:
+            raise RuntimeError("No comprehension question is currently active.")
+        selected_option = self.answer_var.get()
+        if not selected_option:
+            self.question_status.config(text="Select an answer before continuing.")
             return
 
-        player_answer = self.answer_var.get().strip()
-        if player_answer == "":
-            self.status_label.config(text="Don't leave it blank you dingus.")
-            return
-
-        #saves time from start till answer of QA. Start is when text is visible, end is when question is send in
-        self.controller.add_game_timestamp((self.curr_game_time.strftime('%F %T.%f')[:-3], datetime.now().strftime('%F %T.%f')[:-3]))
-        self.controller.reading_QA_results.append({
-            "context_id": self.context_id,
-            "question": self.question,
-            "correct_answer": self.answer,
-            "player_answer": player_answer,
-            "show_question": self.time_at_question.strftime('%F %T.%f')[:-3],
-        })
+        question: ReadingQuestion = self.questions[self.question_index]
+        selected_index = int(selected_option) - 1
+        self.controller.reading_QA_results.append(
+            {
+                "context_id": (
+                    f"{self.material.topic_id}-section-{question.section_number}"
+                ),
+                "topic_id": self.material.topic_id,
+                "language": self.material.language_code,
+                "section_number": question.section_number,
+                "question_id": question.question_id,
+                "question": question.question,
+                "correct_answer": question.options[question.correct_option - 1],
+                "player_answer": question.options[selected_index],
+                "show_question": self.question_shown_at.isoformat(
+                    timespec="milliseconds"
+                ),
+            }
+        )
         self.controller.QA_done += 1
 
-        self.status_label.config(text="")
+        if self.question_index + 1 < len(self.questions):
+            self.question_index += 1
+            self._show_question()
+        else:
+            self._finish_questions()
 
-        # Hide answer UI again
-        self.ans_frame.pack_forget()
-        self.submit_btn.pack_forget()
-        self.show_question_btn.config(state="normal")
-
-        self.new_QA()
-
-    def on_key(self, event):
-        if not self.active:
+    def _finish_questions(self):
+        if self.test_finished or self.started_at is None:
             return
-
-        if self.mode == "question":
-            self.submit_answer()
-
-    def check_time(self):
-        if time.time() - self.start_time >= GAME_TIME_LIMIT:
-            self.active = False
-            self.controller.frames['BetweenGamesPage'].set_message(
-                'Time is up for the Reading Test. Press Continue to proceed.'
+        self.test_finished = True
+        finished_at = datetime.now().astimezone()
+        self.controller.add_game_timestamp(
+            (
+                self.started_at.isoformat(timespec="milliseconds"),
+                finished_at.isoformat(timespec="milliseconds"),
             )
-            self.controller.show_frame('BetweenGamesPage')
-            return
-
-        self.after(1000, self.check_time)
-
-    def end_test(self):
-        if self.active:
-            self.active = False
-        self.controller.game_finished()
+        )
+        self.completion_message.config(
+            text=(
+                f"You read {self.sections_read} section(s) and answered "
+                f"{len(self.questions)} question(s)."
+            )
+        )
+        self.completion_view.tkraise()

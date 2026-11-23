@@ -6,45 +6,55 @@ import tkinter as tk
 import random
 from datetime import datetime
 from tkinter import ttk
+from typing import Optional
 from game_pages.between_page import BetweenGamesPage
 from game_pages.intro_page import IntroPage
 from Games.D2 import AttentionPracticeApp
+from Games.PASAT_Breakpoint.pasat import PasatPage
 from game_pages.planned_pages import ActivityBreakPage, PendingStagePage, StudySessionPage
 from game_pages.post_test_page import PostTestPage
+from game_pages.reading_material import ReadingMaterial, load_reading_material
+from game_pages.reading_page import ReadingPage
 from game_pages.results_page import ResultsPage
-from game_pages.session_flow import build_session_flow
+from game_pages.session_flow import build_session_flow, pasat_metadata_for_stage
 from game_pages.session_schedule import load_session_assignment_from_config
 
-FONT = ("Helvetica", 12)
-HEADER_FONT = ("Helvetica", 16, "bold")
-BG_COLOR = '#2e2e2e'   # dark grey background (app)
-FG_COLOR = '#ffffff'   # foreground (text)
+FONT = ("Helvetica", 14)
+HEADER_FONT = ("Helvetica", 24, "bold")
+BG_COLOR = "#0f172a"
+FG_COLOR = "#e2e8f0"
 THEMES = {
     "dark": {
-        "background": "#2e2e2e",
-        "foreground": "#ffffff",
-        "button": "#444444",
-        "button_foreground": "#ffffff",
-        "hover": "#38bdf8",
-        "hover_foreground": "#111827",
-        "border": "#777777",
-        "separator": "#666666",
-        "input": "#e5e5e5",
-        "input_foreground": "#202020",
-        "muted": "#aaaaaa",
+        "background": "#0f172a",
+        "foreground": "#e2e8f0",
+        "surface": "#1e293b",
+        "surface_alt": "#334155",
+        "button": "#38bdf8",
+        "button_foreground": "#06202e",
+        "hover": "#7dd3fc",
+        "hover_foreground": "#06202e",
+        "border": "#334155",
+        "separator": "#334155",
+        "input": "#1e293b",
+        "input_foreground": "#e2e8f0",
+        "muted": "#94a3b8",
+        "accent": "#38bdf8",
     },
     "light": {
-        "background": "#f4f4f4",
-        "foreground": "#202020",
-        "button": "#ffffff",
-        "button_foreground": "#202020",
+        "background": "#f1f5f9",
+        "foreground": "#0f172a",
+        "surface": "#ffffff",
+        "surface_alt": "#e2e8f0",
+        "button": "#0ea5e9",
+        "button_foreground": "#082f49",
         "hover": "#38bdf8",
-        "hover_foreground": "#111827",
-        "border": "#555555",
-        "separator": "#b8b8b8",
+        "hover_foreground": "#082f49",
+        "border": "#94a3b8",
+        "separator": "#cbd5e1",
         "input": "#ffffff",
-        "input_foreground": "#202020",
-        "muted": "#666666",
+        "input_foreground": "#0f172a",
+        "muted": "#64748b",
+        "accent": "#0284c7",
     },
 }
 
@@ -80,10 +90,12 @@ class App(tk.Tk):
         #self.digit_forward_score = 0
         #self.digit_backward_score = 0
         self.d2_results = {}
-        self.QA_done = 0 # not work yet
+        self.QA_done = 0
         self.game_timestamps = {}
         self.all_sequence_answers = {} # this is can be used for Pasat test, but not work yet
-        self.reading_QA_results = [] # not work yet
+        self.reading_QA_results = []
+        self.reading_material: Optional[ReadingMaterial] = None
+        self.reading_sections_read = 0
 
         # Create a session-specific random sequence so each run generates different game stimuli.
         self.date_time = datetime.now().isoformat()
@@ -119,9 +131,17 @@ class App(tk.Tk):
             BetweenGamesPage,
             PostTestPage,
             ResultsPage,
+            ReadingPage,
+            PasatPage,
         ):
             if F is AttentionPracticeApp:
                 page = F(container, self, rounds=3)
+            elif F is PasatPage:
+                page = F(
+                    container,
+                    self,
+                    results_dir=self.frames["ResultsPage"].dataframe_folder_path,
+                )
             else:
                 page = F(container, self)
             self.frames[F.__name__] = page
@@ -172,6 +192,7 @@ class App(tk.Tk):
             bordercolor=colors["border"],
             focusthickness=1,
             focuscolor=colors["hover"],
+            font=("Helvetica", 12, "bold"),
         )
         style.map(
             "TButton",
@@ -196,8 +217,26 @@ class App(tk.Tk):
             style.configure(
                 label_style,
                 background=colors["background"],
-                foreground=colors["foreground"],
+                foreground=(
+                    colors["accent"]
+                    if label_style == "Title.TLabel"
+                    else colors["foreground"]
+                ),
             )
+        style.configure(
+            "Card.TFrame",
+            background=colors["surface"],
+        )
+        style.configure(
+            "Card.TLabel",
+            background=colors["surface"],
+            foreground=colors["foreground"],
+        )
+        style.configure(
+            "Card.TCheckbutton",
+            background=colors["surface"],
+            foreground=colors["foreground"],
+        )
         for widget_style in ("TEntry", "TCombobox"):
             style.configure(
                 widget_style,
@@ -227,8 +266,8 @@ class App(tk.Tk):
             )
         style.configure(
             "Treeview",
-            background=colors["input"],
-            fieldbackground=colors["input"],
+            background=colors["surface"],
+            fieldbackground=colors["surface"],
             foreground=colors["foreground"],
         )
         style.map(
@@ -250,23 +289,34 @@ class App(tk.Tk):
         )
 
     def _theme_widget(self, widget, colors):
-        if getattr(widget, "_theme_role", None) == "separator":
+        if isinstance(widget, PasatPage):
+            return
+        role = getattr(widget, "_theme_role", None)
+        parent_background = (
+            getattr(widget.master, "_theme_background", None)
+            if widget.master is not None
+            else None
+        ) or colors["background"]
+        child_background = (
+            colors["surface"] if role == "card" else parent_background
+        )
+
+        if role == "separator":
             widget.configure(bg=colors["separator"])
         elif isinstance(widget, (tk.Frame, tk.Canvas)):
-            if not (
-                isinstance(widget, tk.Canvas)
-                and widget.cget("background").lower() == "#f7f7f7"
-            ):
-                widget.configure(bg=colors["background"])
+            widget.configure(bg=child_background)
         elif isinstance(widget, tk.Label):
-            widget.configure(bg=colors["background"], fg=colors["foreground"])
+            widget.configure(
+                bg=child_background,
+                fg=colors["accent"] if role == "title" else colors["foreground"],
+            )
         elif isinstance(widget, (tk.Radiobutton, tk.Checkbutton)):
             widget.configure(
-                bg=colors["background"],
+                bg=child_background,
                 fg=colors["foreground"],
-                activebackground=colors["background"],
+                activebackground=child_background,
                 activeforeground=colors["foreground"],
-                selectcolor=colors["background"],
+                selectcolor=colors["surface_alt"],
             )
         elif isinstance(widget, tk.Button):
             widget.configure(
@@ -275,6 +325,7 @@ class App(tk.Tk):
                 activebackground=colors["hover"],
                 activeforeground=colors["hover_foreground"],
                 highlightbackground=colors["border"],
+                font=("Helvetica", 12, "bold"),
             )
             if not getattr(widget, "_theme_hover_bound", False):
                 widget.bind("<Enter>", self._on_theme_button_enter, add="+")
@@ -287,7 +338,17 @@ class App(tk.Tk):
                 insertbackground=colors["input_foreground"],
                 selectbackground=colors["hover"],
             )
+        elif isinstance(widget, tk.Text):
+            widget.configure(
+                bg=parent_background,
+                fg=colors["foreground"],
+                insertbackground=colors["foreground"],
+                selectbackground=colors["hover"],
+                selectforeground=colors["hover_foreground"],
+                relief="flat",
+            )
 
+        widget._theme_background = child_background
         for child in widget.winfo_children():
             self._theme_widget(child, colors)
 
@@ -327,6 +388,11 @@ class App(tk.Tk):
         assignment = load_session_assignment_from_config(
             participant_name, session_number
         )
+        self.reading_material = load_reading_material(
+            assignment.language,
+            data_directory=self.frames["ResultsPage"].dataframe_folder_path,
+        )
+        self.reading_sections_read = 0
         self.participant_name.set(assignment.participant_name)
         self.participant_id = f"Participant {assignment.participant_number}"
         self.participant_language = assignment.language
@@ -350,10 +416,16 @@ class App(tk.Tk):
         stage = self.current_stage
 
         if stage in ("study_1", "study_2"):
+            if self.reading_material is None:
+                raise RuntimeError(
+                    "Reading material must be loaded before a study session."
+                )
             self.show_frame("StudySessionPage")
             session_number = 1 if stage == "study_1" else 2
             self.frames["StudySessionPage"].start_session(
-                f"Study session {session_number}"
+                f"Study session {session_number}",
+                self.reading_material,
+                self.reading_sections_read,
             )
         elif stage in ("d2_pre", "d2_post"):
             self.show_frame("AttentionPracticeApp")
@@ -368,22 +440,28 @@ class App(tk.Tk):
                 timepoint=timepoint,
             )
         elif stage in ("pasat_pre", "pasat_post"):
-            self.show_frame("PendingStagePage")
-            timepoint = "before the break" if stage == "pasat_pre" else "after the break"
-            self.frames["PendingStagePage"].show_stage(
-                "PASAT (not implemented)",
-                f"The PASAT test for {timepoint} will be added later. "
-                "This placeholder is not a test.",
+            self.show_frame("PasatPage")
+            condition, timepoint = pasat_metadata_for_stage(
+                self.activity_condition, stage
+            )
+            self.frames["PasatPage"].start_session(
+                participant_id=self.participant_id,
+                session=self.session_number,
+                condition=condition,
+                timepoint=timepoint,
             )
         elif stage == "activity_break":
             self.show_frame("ActivityBreakPage")
             self.frames["ActivityBreakPage"].start_break(self.scheduled_activity)
         elif stage == "comprehension":
-            self.show_frame("PendingStagePage")
-            self.frames["PendingStagePage"].show_stage(
-                "Comprehension test (not implemented)",
-                "Reading questions will be loaded from the multilingual dataset later. "
-                "This placeholder is not a test.",
+            if self.reading_material is None:
+                raise RuntimeError(
+                    "Reading material must be loaded before the comprehension stage."
+                )
+            self.show_frame("ReadingPage")
+            self.frames["ReadingPage"].start_game(
+                self.reading_material,
+                self.reading_sections_read,
             )
         elif stage == "post_survey":
             self.show_frame("PostTestPage")
@@ -393,7 +471,7 @@ class App(tk.Tk):
             raise RuntimeError(f"Unknown session stage: {stage}")
 
     def game_finished(self):
-        """Advance after a timed stage or an explicit placeholder continuation."""
+        """Advance after the active timed or interactive stage."""
         if self.current_stage is None or self.current_stage == "results":
             raise RuntimeError("Cannot advance because no session stage is active.")
         self.start_next_stage()

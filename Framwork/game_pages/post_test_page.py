@@ -6,13 +6,13 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 
-FONT = ("Helvetica", 12)
-HEADER_FONT = ("Helvetica", 16, "bold")
-BG_COLOR = '#2e2e2e'
-FG_COLOR = '#ffffff'
-BUTTON_BG = '#444444'
-BUTTON_FG = '#ffffff'
-BUTTON_ACTIVE_BG = '#666666'
+FONT = ("Helvetica", 14)
+HEADER_FONT = ("Helvetica", 24, "bold")
+BG_COLOR = "#0f172a"
+FG_COLOR = "#e2e8f0"
+BUTTON_BG = "#38bdf8"
+BUTTON_FG = "#06202e"
+BUTTON_ACTIVE_BG = "#7dd3fc"
 
 
 class PostTestPage(tk.Frame):
@@ -22,15 +22,18 @@ class PostTestPage(tk.Frame):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
 
-        tk.Label(
+        title = tk.Label(
             self,
             text='Post-test Survey',
             font=HEADER_FONT,
             bg=BG_COLOR,
-            fg=FG_COLOR
-        ).pack(pady=24)
+            fg=FG_COLOR,
+        )
+        title._theme_role = "title"
+        title.pack(pady=24)
 
-        form = tk.Frame(self, bg=BG_COLOR)
+        form = tk.Frame(self, bg=BG_COLOR, padx=28, pady=20)
+        form._theme_role = "card"
         form.pack(pady=10)
 
         self.interruption_var = tk.StringVar(value='No')

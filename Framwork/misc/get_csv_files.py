@@ -3,12 +3,10 @@
 # See LICENSE.txt
 
 """
-get_csv_files.py gathers and combines all csv data files from the muse athena device. 
-currently no support yet for combining the polar data, but you can help other students with this problem ;)
+get_csv_files.py gathers and combines all CSV data files from Polar devices.
 
 parameters/inputs:
-- root_directory: root folder of the muse/athena data, for example: C/:name/to/folder/
-- target_folder: muse or polar
+- root_directory: root folder containing Polar CSV data
 
 """
 
@@ -19,6 +17,7 @@ from collections import defaultdict
 
 
 def gather_folder_data(root_path):
+    """Count folders under the root and record each folder name and its parent."""
     folder_count = 0
     name_counter = defaultdict(int)
     parent_map = defaultdict(list)
@@ -33,6 +32,7 @@ def gather_folder_data(root_path):
 
 
 def find_csv_in_target_folders(root_path, device_folder_name):
+    """Find CSV files inside directories whose name matches the device folder."""
     csv_files = []
 
     for current_path, dirnames, _ in os.walk(root_path):
@@ -48,8 +48,11 @@ def find_csv_in_target_folders(root_path, device_folder_name):
 
 def merge_csv_files(csv_files, output_filename="merged_output_small.csv"):
     """
-    Merges all CSV files into one CSV.
-    Assumes all files have identical headers.
+    Merge CSV files by copying their rows into one output file.
+
+    The first non-empty file supplies the header; all input files are expected
+    to use the same columns. This older implementation currently processes at
+    most three files.
     """
     if not csv_files:
         print("No CSV files found to merge.")
@@ -91,43 +94,17 @@ def merge_csv_files(csv_files, output_filename="merged_output_small.csv"):
     print(f"\nMerged CSV created at: {output_path}")
 
 
-def muse_formatter(dataframe):
-    # Save: Timestamp, Alpha, Beta, Theta, RAW, Heart_rate
-    dataframe = dataframe[
-        ['TimeStamp',
-        'Theta_TP9', 'Theta_AF7', 'Theta_AF8', 'Theta_TP10', 
-        'Alpha_TP9', 'Alpha_AF7', 'Alpha_AF8', 'Alpha_TP10', 
-        'Beta_TP9', 'Beta_AF7', 'Beta_AF8', 'Beta_TP10', 
-        'RAW_TP9', 'RAW_AF7', 'RAW_AF8', 'RAW_TP10', 
-        'Heart_Rate', 'HeadBandOn'
-        ]
-    ]
-
-    print(dataframe.columns)
-    print(dataframe.head())
-
-    # format timestamps
-    dataframe["TimeStamp"] = pd.to_datetime(dataframe["TimeStamp"], format="mixed")
-    
-    # if all values of a row are empty, then delete row
-    dataframe = dataframe.mask(dataframe.isna()).dropna(subset=[
-        'Theta_TP9', 'Theta_AF7', 'Theta_AF8', 'Theta_TP10', 
-        'Alpha_TP9', 'Alpha_AF7', 'Alpha_AF8', 'Alpha_TP10', 
-        'Beta_TP9', 'Beta_AF7', 'Beta_AF8', 'Beta_TP10', 
-        'RAW_TP9', 'RAW_AF7', 'RAW_AF8', 'RAW_TP10'], 
-        how='all')
-    return dataframe
-
 def polar_formatter(dataframe):
-    # add code to format the polar data before saving everything
+    """Return combined Polar data unchanged until its export format is known."""
     return dataframe
 
-def merge_csv_files_to_csv(csv_files, output_filename="merged_output.csv", device_name="muse"):
+def merge_csv_files_to_csv(csv_files, output_filename="polar.csv"):
     """
-    Loads all CSV files safely,
-    reports skipped rows per file,
-    concatenates them,
-    and saves the combined data as a CSV file.
+    Load, combine, and save Polar CSV files while reporting row counts.
+
+    Malformed CSV rows are skipped during loading. The combined data is passed
+    through ``polar_formatter`` and saved beside this script using the given
+    output filename.
     """
 
     if not csv_files:
@@ -189,10 +166,7 @@ def merge_csv_files_to_csv(csv_files, output_filename="merged_output.csv", devic
     output_name = os.path.splitext(output_filename)[0] + ".csv"
     output_path = os.path.join(script_directory, output_name)
 
-    if device_name == "muse":
-        combined_df = muse_formatter(combined_df)
-    elif device_name == "polar":
-        combined_df = polar_formatter(combined_df)
+    combined_df = polar_formatter(combined_df)
 
     combined_df.to_csv(output_path, index=False)
 
@@ -204,6 +178,7 @@ def merge_csv_files_to_csv(csv_files, output_filename="merged_output.csv", devic
     print(f"Saved to: {output_path}")
 
 def print_summary(total_folders, name_counter):
+    """Print the total folder count and number of distinct folder names."""
     print("===== Folder Summary =====")
     print(f"Total folders found: {total_folders}")
     print(f"Unique folder names: {len(name_counter)}\n")
@@ -211,7 +186,6 @@ def print_summary(total_folders, name_counter):
 
 if __name__ == "__main__":
     root_directory = input("Enter the root folder path: ").strip()
-    device_name = input("Enter the device name to search for CSV files (options: 'muse'/'polar'): ").strip()
 
     if not os.path.isdir(root_directory):
         print("Invalid directory path.")
@@ -219,11 +193,11 @@ if __name__ == "__main__":
         total, counter, _ = gather_folder_data(root_directory)
         print_summary(total, counter)
 
-        csv_files = find_csv_in_target_folders(root_directory, device_name)
+        csv_files = find_csv_in_target_folders(root_directory, "polar")
 
         print(f"\nTotal CSV files found: {len(csv_files)}")
         for file in csv_files:
             print(f"  - {file}")
 
         # merge_csv_files(csv_files)
-        merge_csv_files_to_csv(csv_files, output_filename=device_name, device_name=device_name)
+        merge_csv_files_to_csv(csv_files, output_filename="polar")

@@ -31,11 +31,12 @@ participants:
 ```
 
 The app asks for the roster name and a session number from 1 to 24, then looks
-up that participant's scheduled condition. The study session, PASAT, and
-comprehension pages are currently placeholders pending the reading dataset and
-PASAT implementation; do not use this flow for participant data collection yet.
-The optional reading page accepts a pandas DataFrame from its caller; no
-pickled dataset setup is required.
+up that participant's scheduled condition. The app loads the topic JSON matching
+the participant's language from the configured data folder. Participants read
+one section at a time during each study session; progress carries over, so the
+second study session starts at the next unread section. At the comprehension
+stage, the app presents two questions for every section read. Responses are
+saved in `read_df.csv` with their topic, language, section, and question IDs.
 
 ## Start game
 After setting everything up, you then can run the game by calling: `Game.py` and try to play the game yourself.
@@ -46,4 +47,5 @@ Session tables are appended as CSV files under `data_folder_path`.
 Use `QA_score_grader.py` to grade answers from `read_df.csv`; scores are saved
 to `main_df.csv`.
 
-combine muse or polar data using the `get_csv_files.py`. currently only support for combining the muse athena data is implemented.  
+Combine Polar CSV data using `get_csv_files.py`. The script searches for folders
+named `polar`, combines their CSV files, and saves the result as `polar.csv`.

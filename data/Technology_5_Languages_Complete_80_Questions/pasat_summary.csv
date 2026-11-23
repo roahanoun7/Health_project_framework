@@ -1,0 +1,4 @@
+run_id,participant_id,session,condition,timepoint,timestamp,interval_s,mode,n_trials,n_correct,n_wrong,n_missed,percent_correct,mean_rt_ms
+20261123-184329,Participant 1,2,no_break,final,2026-11-23T18:43:29,3.0,audio+screen,20,9,3,8,45.0,1296
+20261123-185107,Participant 1,1,doomscrolling,pre_break,2026-11-23T18:51:07,3.0,audio+screen,20,12,2,6,60.0,1561
+20261123-185258,Participant 1,1,doomscrolling,post_break,2026-11-23T18:52:58,3.0,audio+screen,20,8,5,7,40.0,1757

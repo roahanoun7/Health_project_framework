@@ -14,12 +14,12 @@ CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
 
 
 # ---------- Configuration ----------
-HEADER_FONT = ("Helvetica", 16, "bold")
-BG_COLOR = '#2e2e2e'   # dark grey background (app)
-FG_COLOR = '#ffffff'   # foreground (text)
-BUTTON_BG = '#444444'
-BUTTON_FG = '#ffffff'
-BUTTON_ACTIVE_BG = '#666666'
+HEADER_FONT = ("Helvetica", 24, "bold")
+BG_COLOR = "#0f172a"
+FG_COLOR = "#e2e8f0"
+BUTTON_BG = "#38bdf8"
+BUTTON_FG = "#06202e"
+BUTTON_ACTIVE_BG = "#7dd3fc"
 
 
 # ---------- Results Page (non-editable) ----------
@@ -27,9 +27,21 @@ class ResultsPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
-        tk.Label(self, text='Results', font=HEADER_FONT, bg=BG_COLOR, fg=FG_COLOR).pack(pady=10)
-        self.results_label = tk.Label(self, text='', font=('Courier', 11), justify='left', bg=BG_COLOR, fg=FG_COLOR)
-        self.results_label.pack(pady=6)
+        title = tk.Label(self, text='Results', font=HEADER_FONT, bg=BG_COLOR, fg=FG_COLOR)
+        title._theme_role = "title"
+        title.pack(pady=24)
+        results_card = tk.Frame(self, bg=BG_COLOR, padx=36, pady=24)
+        results_card._theme_role = "card"
+        results_card.pack(pady=12)
+        self.results_label = tk.Label(
+            results_card,
+            text='',
+            font=("Helvetica", 14),
+            justify='left',
+            bg=BG_COLOR,
+            fg=FG_COLOR,
+        )
+        self.results_label.pack()
         btn_frame = tk.Frame(self, bg=BG_COLOR)
         btn_frame.pack(pady=6)
         tk.Button(btn_frame, text='Save results', command=self.save_results,
@@ -37,7 +49,9 @@ class ResultsPage(tk.Frame):
 
         with CONFIG_PATH.open(encoding="utf-8") as config_file:
             config = yaml.safe_load(config_file)
-        self.dataframe_folder_path = config["data_folder_path"]
+        self.dataframe_folder_path = Path(config["data_folder_path"])
+        if not self.dataframe_folder_path.is_absolute():
+            self.dataframe_folder_path = CONFIG_PATH.parent / self.dataframe_folder_path
         if not os.path.exists(self.dataframe_folder_path):
             print("Missing experiment_data folder, creating folder")
             os.makedirs(self.dataframe_folder_path)
@@ -107,7 +121,19 @@ class ResultsPage(tk.Frame):
         # ======== reading df ========
         all_reading = []
         for result in reading_QA_results:
-            reading_data = {'participant_name': participant_name, 'date_time': pd.to_datetime(date_time), 'context_id': result['context_id'], 'question': result['question'], 'correct_answer': result['correct_answer'], 'player_answer': result['player_answer'], 'show_question': pd.to_datetime(result['show_question'])}
+            reading_data = {
+                'participant_name': participant_name,
+                'date_time': pd.to_datetime(date_time),
+                'context_id': result['context_id'],
+                'topic_id': result['topic_id'],
+                'language': result['language'],
+                'section_number': result['section_number'],
+                'question_id': result['question_id'],
+                'question': result['question'],
+                'correct_answer': result['correct_answer'],
+                'player_answer': result['player_answer'],
+                'show_question': pd.to_datetime(result['show_question']),
+            }
             all_reading.append(reading_data)
 
         read_df = pd.DataFrame(all_reading)

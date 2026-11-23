@@ -272,14 +272,18 @@ class AttentionPracticeApp(tk.Frame):
             if row == row_count - 1:
                 column += last_row_offset
             item = ttk.Frame(grid, padding=6, width=104, height=132)
+            item.configure(style="Card.TFrame")
+            item._theme_role = "card"
             item.grid(row=row, column=column, padx=6, pady=6)
             item.grid_propagate(False)
-            ttk.Label(item, text=str(i + 1)).pack(pady=(0, 2))
+            ttk.Label(item, text=str(i + 1), style="Card.TLabel").pack(
+                pady=(0, 2)
+            )
             symbol_canvas = tk.Canvas(
                 item,
                 width=72,
                 height=84,
-                background="#f7f7f7",
+                background="#1e293b",
                 highlightthickness=0,
             )
             symbol_canvas.pack()
@@ -291,7 +295,11 @@ class AttentionPracticeApp(tk.Frame):
                     not selection.get()
                 ),
             )
-            checkbox = ttk.Checkbutton(item, variable=self.selections[i])
+            checkbox = ttk.Checkbutton(
+                item,
+                variable=self.selections[i],
+                style="Card.TCheckbutton",
+            )
             checkbox.pack(pady=(2, 0))
             checkbox.bind("<Return>", self.handle_enter)
 
@@ -308,20 +316,24 @@ class AttentionPracticeApp(tk.Frame):
         self.deadline = self.round_start_time + self.seconds_per_round
         self.update_timer()
 
-    @staticmethod
-    def draw_symbol(canvas, letter, above_count, below_count):
+    def draw_symbol(self, canvas, letter, above_count, below_count):
+        symbol_color = (
+            self.controller.get_theme_colors()["foreground"]
+            if self.controller is not None
+            else "#e2e8f0"
+        )
         canvas.create_text(
             36,
             42,
             text=letter,
             font=("Times New Roman", 30),
-            fill="#202020",
+            fill=symbol_color,
         )
         for count, center_y in ((above_count, 14), (below_count, 70)):
             for dash_index in range(count):
                 x = 36 + (dash_index - (count - 1) / 2) * 8
                 canvas.create_line(
-                    x, center_y - 5, x, center_y + 5, fill="#202020", width=2
+                    x, center_y - 5, x, center_y + 5, fill=symbol_color, width=2
                 )
 
     def update_timer(self):

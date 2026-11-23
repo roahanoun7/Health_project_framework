@@ -5,12 +5,12 @@
 import tkinter as tk
 
 # ---------- Configuration ----------
-HEADER_FONT = ("Helvetica", 16, "bold")
-BG_COLOR = '#2e2e2e'   # dark grey background (app)
-FG_COLOR = '#ffffff'   # foreground (text)
-BUTTON_BG = '#444444'
-BUTTON_FG = '#ffffff'
-BUTTON_ACTIVE_BG = '#666666'
+HEADER_FONT = ("Helvetica", 24, "bold")
+BG_COLOR = "#0f172a"
+FG_COLOR = "#e2e8f0"
+BUTTON_BG = "#38bdf8"
+BUTTON_FG = "#06202e"
+BUTTON_ACTIVE_BG = "#7dd3fc"
 
 
 # ---------- Between Games Page (Continue only when needed) ----------
@@ -22,7 +22,20 @@ class BetweenGamesPage(tk.Frame):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
         self.message_var = tk.StringVar()
-        tk.Label(self, textvariable=self.message_var, font=HEADER_FONT, bg=BG_COLOR, fg=FG_COLOR).pack(pady=40)
+        message_card = tk.Frame(self, bg=BG_COLOR, padx=32, pady=24)
+        message_card._theme_role = "card"
+        message_card.pack(pady=40)
+        message = tk.Label(
+            message_card,
+            textvariable=self.message_var,
+            font=HEADER_FONT,
+            bg=BG_COLOR,
+            fg=FG_COLOR,
+            wraplength=760,
+            justify="center",
+        )
+        message._theme_role = "title"
+        message.pack()
         tk.Button(self, text='Continue', command=self.on_continue,
                   bg=BUTTON_BG, fg=BUTTON_FG, activebackground=BUTTON_ACTIVE_BG).pack(pady=30)
 

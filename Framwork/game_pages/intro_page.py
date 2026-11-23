@@ -8,11 +8,11 @@ from zipfile import BadZipFile
 import yaml
 from openpyxl.utils.exceptions import InvalidFileException
 
-FONT = ("Helvetica", 12)
-HEADER_FONT = ("Helvetica", 16, "bold")
-BG_COLOR = '#2e2e2e'
-FG_COLOR = '#ffffff'
-SEPARATOR_COLOR = '#666666'
+FONT = ("Helvetica", 14)
+HEADER_FONT = ("Helvetica", 24, "bold")
+BG_COLOR = "#0f172a"
+FG_COLOR = "#e2e8f0"
+SEPARATOR_COLOR = "#334155"
 
 
 class IntroPage(tk.Frame):
@@ -21,15 +21,25 @@ class IntroPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
-        tk.Label(
+        title = tk.Label(
             self,
-            text='\nWelcome — Mental Performance survey\n\nPlease answer the following questions before starting the session.',
+            text="Mental Performance",
             font=HEADER_FONT,
             bg=BG_COLOR,
-            fg=FG_COLOR
-        ).pack(pady=18)
+            fg=FG_COLOR,
+        )
+        title._theme_role = "title"
+        title.pack(pady=(24, 4))
+        tk.Label(
+            self,
+            text="Please answer the following questions before starting the session.",
+            font=FONT,
+            bg=BG_COLOR,
+            fg=FG_COLOR,
+        ).pack(pady=(0, 12))
 
-        form = tk.Frame(self, bg=BG_COLOR)
+        form = tk.Frame(self, bg=BG_COLOR, padx=24, pady=16)
+        form._theme_role = "card"
         form.pack(pady=10)
 
         self.participant_name = controller.participant_name
