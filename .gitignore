@@ -224,3 +224,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Experiment and participant data
+# Keep misplaced data out even if it is placed outside a dedicated data folder.
+**/data/
+**/Results_Data/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.xlsm
+*.ods
+*.parquet
+*.feather
+*.sav
+*.dta
+*.db
+*.sqlite
+*.sqlite3
