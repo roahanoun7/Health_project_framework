@@ -19,6 +19,7 @@ class IntroPage(tk.Frame):
     """Introduction and pre-test questionnaire."""
 
     def __init__(self, parent, controller):
+        """Build the participant questionnaire and its start button."""
         super().__init__(parent, bg=BG_COLOR)
         self.controller = controller
         title = tk.Label(
@@ -138,6 +139,7 @@ class IntroPage(tk.Frame):
 
     @staticmethod
     def _add_entry(form, row, label, variable, width=32):
+        """Add a labeled text-entry question to the form."""
         question = IntroPage._question_row(form, row)
         tk.Label(question, text=label, font=FONT, bg=BG_COLOR, fg=FG_COLOR).grid(
             row=0, column=0, sticky='w', padx=(0, 12), pady=2
@@ -149,6 +151,7 @@ class IntroPage(tk.Frame):
 
     @staticmethod
     def _add_choice(form, row, label, variable, choices):
+        """Add a labeled multiple-choice question to the form."""
         question = IntroPage._question_row(form, row)
         tk.Label(question, text=label, font=FONT, bg=BG_COLOR, fg=FG_COLOR).grid(
             row=0, column=0, sticky='w', padx=(0, 12), pady=2
@@ -169,6 +172,7 @@ class IntroPage(tk.Frame):
 
     @staticmethod
     def _add_combobox(form, row, label, variable, values):
+        """Add a labeled drop-down question to the form."""
         question = IntroPage._question_row(form, row)
         tk.Label(question, text=label, font=FONT, bg=BG_COLOR, fg=FG_COLOR).grid(
             row=0, column=0, sticky='w', padx=(0, 12), pady=2
@@ -185,6 +189,7 @@ class IntroPage(tk.Frame):
 
     @staticmethod
     def _question_row(form, row):
+        """Create and position a row for one questionnaire question."""
         question = tk.Frame(form, bg=BG_COLOR)
         question.grid(row=row, column=0, columnspan=2, sticky='ew')
         question.columnconfigure(1, weight=1)
@@ -192,11 +197,13 @@ class IntroPage(tk.Frame):
 
     @staticmethod
     def _add_separator(question):
+        """Add a themed divider beneath a question."""
         separator = tk.Frame(question, height=1, bg=SEPARATOR_COLOR)
         separator._theme_role = "separator"
         separator.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(3, 0))
 
     def apply_theme(self):
+        """Redraw the start button using the active theme colors."""
         colors = self.controller.get_theme_colors()
         self.start_button.configure(bg=colors["background"])
         self.start_button.delete("all")
@@ -221,19 +228,22 @@ class IntroPage(tk.Frame):
         )
 
     def _start_button_enter(self, _event):
+        """Show the start button's hover appearance."""
         self._start_button_hovered = True
         self.apply_theme()
 
     def _start_button_leave(self, _event):
+        """Restore the start button's normal appearance."""
         self._start_button_hovered = False
         self.apply_theme()
 
     def _start_from_button(self, _event):
+        """Handle mouse or keyboard activation of the start button."""
         self.on_start()
         return 'break'
 
     def on_start(self):
-        """Validate the participant name and start the first game."""
+        """Validate the questionnaire and start the first game."""
         name = self.participant_name.get().strip()
         if not name:
             messagebox.showwarning('Name required', 'Please enter your name or login.')
@@ -252,6 +262,29 @@ class IntroPage(tk.Frame):
                 'Please enter a session number from 1 to 24.',
             )
             return
+
+        # check if all survey questions not empty ! 
+        required_answers = (
+            ('Do you have an exam or major deadline this week?', self.exam_deadline_var),
+            ('Are you wearing glasses?', self.glasses_var),
+            ('Did you eat breakfast?', self.breakfast_var),
+            ('Have you had caffeine today?', self.caffeine_var),
+            ('Have you had alcohol within the last 24 hours?', self.alcohol_var),
+            ('How many hours did you sleep?', self.sleep_hours_var),
+            ('How well did you sleep?', self.sleep_quality_var),
+            ('How long have you been awake?', self.awake_hours_var),
+            ('How much screen time have you had today?', self.screen_time_var),
+            ('What is the light level in your room?', self.room_light_var),
+            ('How stressed do you feel right now?', self.stress_var),
+            ('Do you feel ill/have a cold?', self.ill_var),
+        )
+        for question_text, answer_var in required_answers:
+            if not answer_var.get().strip():
+                messagebox.showwarning(
+                    'Answer required',
+                    f'Please answer: {question_text}',
+                )
+                return
 
         if self.confirmed_var.get() != 'Yes':
             messagebox.showwarning(

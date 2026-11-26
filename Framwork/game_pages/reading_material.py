@@ -14,6 +14,7 @@ DEFAULT_DATA_DIRECTORY = (
     / "Technology_5_Languages_Complete_80_Questions"
 )
 QUESTIONS_PER_SECTION = 2
+QUESTIONS_TO_PRESENT_PER_SECTION = 1
 
 LANGUAGE_CODES = {
     "ar": "ar",
@@ -184,7 +185,7 @@ def questions_for_sections(
     material: ReadingMaterial,
     sections_read: int,
 ) -> tuple[ReadingQuestion, ...]:
-    """Return two ordered questions for every section the participant read."""
+    """Return the first question for each section the participant read."""
     if (
         not isinstance(sections_read, int)
         or isinstance(sections_read, bool)
@@ -193,5 +194,5 @@ def questions_for_sections(
         raise ValueError(
             f"sections_read must be between 1 and {len(material.sections)}."
         )
-    question_count = sections_read * QUESTIONS_PER_SECTION
-    return material.questions[:question_count]
+    question_count = sections_read * QUESTIONS_TO_PRESENT_PER_SECTION
+    return material.questions[::QUESTIONS_PER_SECTION][:question_count]

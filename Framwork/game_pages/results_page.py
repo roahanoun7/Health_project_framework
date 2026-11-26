@@ -76,12 +76,10 @@ class ResultsPage(tk.Frame):
         participant_name = self.controller.participant_name.get().strip()
         questionnaire_answers = self.controller.questionnaire_answers
         post_test_answers = self.controller.post_test_answers
-
-       # digit_forw_score = self.controller.digit_forward_score
-        #digit_backw_score = self.controller.digit_backward_score
         d2_results = self.controller.d2_results
+        pasat_results = self.controller.pasat_results
 
-        QA_score = self.controller.QA_done
+        QA_score = self.controller.QA_done # for the qustions i should update it
         reading_QA_results = self.controller.reading_QA_results
 
         date_time = self.controller.date_time
@@ -104,6 +102,11 @@ class ResultsPage(tk.Frame):
             'QA_done': QA_score,
             'QA_score': np.nan
         }
+        for stage, result in pasat_results.items():
+            main_data.update({
+                f"{stage}_{key.removeprefix('pasat_')}": value
+                for key, value in result.items()
+            })
         main_df = pd.DataFrame([main_data])
         main_df.set_index(['participant_name', 'date_time'], inplace=True)
    
@@ -112,6 +115,7 @@ class ResultsPage(tk.Frame):
         for game in game_timestamps:
             for times in game_timestamps[game]:
                 digit_data = {'participant_name': participant_name, 'date_time': pd.to_datetime(date_time), "game_type": game, "start_time": pd.to_datetime(times[0]), "end_time": pd.to_datetime(times[1])}
+                digit_data.update(self.controller.pasat_results.get(game, {}))
                 all_games.append(digit_data)
 
         games_times_df = pd.DataFrame(all_games)

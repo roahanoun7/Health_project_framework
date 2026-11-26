@@ -241,6 +241,7 @@ class PasatPage(tk.Frame):
     def start_run(self, practice):
         self.clear()
         self.practice = practice
+        self.game_started_at = None
         self.digits = make_sequence(PRACTICE_DIGITS if practice else N_DIGITS)
         self.trials, self.i = [], -1
         self.answer = self.rt = None
@@ -267,6 +268,8 @@ class PasatPage(tk.Frame):
     def countdown(self, n):
         if n == 0:
             self.t_start = time.perf_counter()
+            if not self.practice and self.controller is not None:
+                self.game_started_at = datetime.now().astimezone()
             self.tick()
             return
         self.digit_lbl.config(text=str(n), fg=MUTED)
@@ -340,20 +343,54 @@ class PasatPage(tk.Frame):
 
         saved = ""
         if not self.practice:
-            run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-            common = {"run_id": run_id, **self.info}
-            append_csv(self.results_dir / "pasat_trials.csv",
-                       [{**common, **x, "interval_s": INTERVAL_SECONDS} for x in t])
-            append_csv(self.results_dir / "pasat_summary.csv",
-                       [{**common, "timestamp": datetime.now().isoformat(timespec="seconds"),
-                         "interval_s": INTERVAL_SECONDS,
-                         "mode": ("audio+screen" if SHOW_DIGIT_ON_SCREEN else "audio") if audio_ready() else "screen",
-                         "n_trials": len(t), "n_correct": n_ok, "n_wrong": n_wrong,
-                         "n_missed": n_missed, "percent_correct": percent, "mean_rt_ms": mean_rt}])
-            saved = (
-                f"Saved to {self.results_dir / 'pasat_summary.csv'} "
-                "and pasat_trials.csv"
-            )
+            summary = {
+                "pasat_condition": self.info["condition"],
+                "pasat_timepoint": self.info["timepoint"],
+                "pasat_interval_s": INTERVAL_SECONDS,
+                "pasat_mode": (
+                    ("audio+screen" if SHOW_DIGIT_ON_SCREEN else "audio")
+                    if audio_ready()
+                    else "screen"
+                ),
+                "pasat_n_trials": len(t),
+                "pasat_n_correct": n_ok,
+                "pasat_n_wrong": n_wrong,
+                "pasat_n_missed": n_missed,
+                "pasat_percent_correct": percent,
+                "pasat_mean_rt_ms": mean_rt,
+            }
+            if self.controller is None:
+                run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+                common = {"run_id": run_id, **self.info}
+                append_csv(
+                    self.results_dir / "pasat_trials.csv",
+                    [{**common, **x, "interval_s": INTERVAL_SECONDS} for x in t],
+                )
+                append_csv(
+                    self.results_dir / "pasat_summary.csv",
+                    [{
+                        **common,
+                        "timestamp": datetime.now().isoformat(timespec="seconds"),
+                        **{
+                            key.removeprefix("pasat_"): value
+                            for key, value in summary.items()
+                        },
+                    }],
+                )
+                saved = (
+                    f"Saved to {self.results_dir / 'pasat_summary.csv'} "
+                    "and pasat_trials.csv"
+                )
+            else:
+                finished_at = datetime.now().astimezone()
+                if self.game_started_at is None:
+                    raise RuntimeError("PASAT test start time was not recorded.")
+                self.controller.add_game_timestamp((
+                    self.game_started_at.isoformat(timespec="milliseconds"),
+                    finished_at.isoformat(timespec="milliseconds"),
+                ))
+                self.controller.add_pasat_result(summary)
+                saved = "Results will be saved with the session's game results."
 
         self.clear()
         label(self.main, "Practice done" if self.practice else "Finished", 32, ACCENT, True).pack(pady=(10, 4))

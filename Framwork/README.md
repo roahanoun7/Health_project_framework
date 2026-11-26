@@ -44,6 +44,10 @@ After setting everything up, you then can run the game by calling: `Game.py` and
 ## misc files
 
 Session tables are appended as CSV files under `data_folder_path`.
+When PASAT is run through `Game.py`, its summary metrics and start/end times
+are included in `games_times_df.csv`; stage-prefixed PASAT metrics are also
+saved in `main_df.csv`. Running `pasat.py` standalone still saves its own
+summary and trial CSV files.
 Use `QA_score_grader.py` to grade answers from `read_df.csv`; scores are saved
 to `main_df.csv`.
 

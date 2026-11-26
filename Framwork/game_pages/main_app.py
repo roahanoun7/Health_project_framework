@@ -92,6 +92,7 @@ class App(tk.Tk):
         self.d2_results = {}
         self.QA_done = 0
         self.game_timestamps = {}
+        self.pasat_results = {}
         self.all_sequence_answers = {} # this is can be used for Pasat test, but not work yet
         self.reading_QA_results = []
         self.reading_material: Optional[ReadingMaterial] = None
@@ -383,6 +384,12 @@ class App(tk.Tk):
             raise RuntimeError("Cannot record a timestamp without an active stage.")
         self.game_timestamps.setdefault(self.current_stage, []).append(time_value)
 
+    def add_pasat_result(self, result):
+        """Store summary metrics for the active PASAT session stage."""
+        if self.current_stage not in ("pasat_pre", "pasat_post"):
+            raise RuntimeError("Cannot record PASAT results outside a PASAT stage.")
+        self.pasat_results[self.current_stage] = result
+
     def begin_session(self, participant_name, session_number):
         """Resolve the schedule assignment and start the first study session."""
         assignment = load_session_assignment_from_config(
@@ -400,6 +407,8 @@ class App(tk.Tk):
         self.week_number = assignment.week
         self.scheduled_activity = assignment.activity_label
         self.activity_condition = assignment.activity
+        self.game_timestamps = {}
+        self.pasat_results = {}
         self.date_time = datetime.now().isoformat()
         self.random_seed = self.date_time
         random.seed(self.random_seed)
